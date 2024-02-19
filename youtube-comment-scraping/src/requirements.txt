@@ -1,0 +1,6 @@
+selenium==4.16.0
+pytube
+textblob
+elasticsearch==8.12.0
+loguru==0.7.2
+PyYAML

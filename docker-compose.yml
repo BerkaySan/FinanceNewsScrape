@@ -1,0 +1,77 @@
+version: "3"
+
+services:
+  ofelia:
+    image: mcuadros/ofelia:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/config.ini:/etc/ofelia/config.ini
+    command: daemon --config /etc/ofelia/config.ini
+  scraping_co:
+    image: scraping_img_rss
+    build:
+      context: news-scraping
+      dockerfile: Dockerfile
+    volumes:
+      - ./config:/app/config
+      - ./lib:/app/lib
+      - ./log/userlog:/app/log
+
+    environment:
+      - TZ=UTC-3
+
+  selenium-hub:
+    image: selenium/hub:latest
+    container_name: selenium-hub
+    ports:
+      - "4444:4444"
+
+  chrome_1:
+    image: selenium/node-chrome:dev
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+
+  chrome_2:
+    image: selenium/node-chrome:dev
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+
+  eksi_app:
+    image: eksi_scrape_img
+    build:
+      context: eksi-scraping/src
+      dockerfile: Dockerfile
+    privileged: true
+    command: sh -c "sleep 6 && python /app/eksi_app.py && exit 0"
+    volumes:
+      - ./config:/app/config
+      - ./lib:/app/lib
+      - ./log/userlog:/app/log
+    environment:
+      - TZ=UTC-3
+
+
+  youtube_scrap:  # container_name
+    image: youtube_scrap_img # image_name
+    build:
+      context: youtube-comment-scraping
+      dockerfile: Dockerfile
+    privileged: true
+    command: sh -c "sleep 7 && python /app/main.py && exit 0"
+    volumes:
+      - ./config:/app/config
+      - ./log/userlog:/app/log
+      - ./lib:/app/lib
+
+    environment:
+      - TZ=UTC-3

@@ -1,0 +1,6 @@
+version: '3'
+services:
+  crontab:
+    build: .
+    volumes:
+      - home/devlab/Desktop/Project_Merge/runner/runner:/etc/cron.d/crontab
