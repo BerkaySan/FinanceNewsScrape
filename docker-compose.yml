@@ -1,12 +1,6 @@
 version: "3"
 
 services:
-  ofelia:
-    image: mcuadros/ofelia:latest
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./config/config.ini:/etc/ofelia/config.ini
-    command: daemon --config /etc/ofelia/config.ini
   scraping_co:
     image: scraping_img_rss
     build:
@@ -59,7 +53,6 @@ services:
       - ./log/userlog:/app/log
     environment:
       - TZ=UTC-3
-
 
   youtube_scrap:  # container_name
     image: youtube_scrap_img # image_name
