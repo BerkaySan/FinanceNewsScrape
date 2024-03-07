@@ -1,15 +1,13 @@
 import yaml, json, newspaper, feedparser
 from datetime import datetime
 from fuzzywuzzy import fuzz
-from loguru import logger
 from datetime import datetime
 import warnings
+import sqlite3
+import os
 
 warnings.filterwarnings("ignore")
-import sys
 
-sys.path.append("lib")
-from elastic_lib import connect_to_elastic, write_to_elastic
 
 
 def scrape_news_from_feed(feed_url):
@@ -45,68 +43,45 @@ def scrape_news_from_feed(feed_url):
 
 
 current_time = datetime.now().strftime("%d-%m-%Y_%H")
-log_file = f"/app/log/{current_time}.log"
 
-logger.add(
-    log_file, encoding="utf8", format="{time:DD-MM-YYYY_HH-mm}  | {level}  | {message}"
-)
-
-
-with open("/app/config/blacklist.json") as f:
-    blacklist_data = json.load(f)
-
-
-with open("/app/config/config.yaml", "r") as file:
-    config = yaml.safe_load(file)
-
-es_config = config["elasticsearch"]
-
+# with open("/app/config/blacklist.json") as f:
+#     blacklist_data = json.load(f)
 
 with open("rss_links.txt") as file_object:
     lines = file_object.readlines()
     counter = 0
-    logger.info("Haber sitelerinden veri çekilmeye başlanıyor...")
-    logger.info(f"{len(lines)} farklı siteden haber çekiliyor...")
+    conn = sqlite3.connect('/app/data/news.db')
+
+    c = conn.cursor()
+
+     
     for line in lines:
         feed_url = line.rstrip()
         articles = scrape_news_from_feed(feed_url)
         if articles is None:
             continue
         for article in articles:
-            try:
-                es = connect_to_elastic(
-                    host_ip=f"{es_config['host']}:{es_config['port']}",
-                    username=es_config["user"],
-                    password=es_config["password"],
-                )
-            except Exception as connection_error:
-                print(
-                    "An exception occurred while connecting to ElasticSearch:",
-                    connection_error,
-                )
-                continue
-
+            #if table does not exist, create it
+            c.execute('''CREATE TABLE IF NOT EXISTS news (title text PRIMARY KEY, date text, content text, link text)''')
             try:
                 # Check if an element is in the blacklist
                 blacklisted = False
-                for item in blacklist_data:
-                    if fuzz.ratio(item["content"], article["content"]) > 0.7:
-                        blacklisted = True
-                        break
+                # for item in blacklist_data:
+                #     if fuzz.ratio(item["content"], article["content"]) > 0.7:
+                #         blacklisted = True
+                #         break
                 if not blacklisted:
-                    write_to_elastic(
-                        es,
-                        "news",
-                        title=article["title"],
-                        date=datetime.now(),
-                        content=article["content"],
-                        link=article["link"],
-                    )
+                    # Insert the article into the database
+                    print("Inserting article into the database.")
+                    c.execute("INSERT INTO news VALUES (?, ?, ?, ?)", (article["title"], article["publish_date"], article["content"], article["link"]))
+                    conn.commit()
+
                     counter += 1
             except Exception as error:
                 print("An exception occurred while processing article data:", error)
                 print("This news is already in the database.")
+    
                 continue
+    # We can also close the cursor if we are done with it
+c.close()
 
-logger.info(f"{counter} tane yeni haber eklendi.")
-logger.success("Haber çekilme işlemi başarıyla tamamlandı.")

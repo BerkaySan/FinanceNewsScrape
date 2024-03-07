@@ -1,2 +1,0 @@
-sudo docker run -t -i ekito/runner
-

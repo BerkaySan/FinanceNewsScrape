@@ -1,2 +1,0 @@
-0 */3 * * * /home/devlab/Desktop/Project_Merge/run.sh >> "/home/devlab/Desktop/Project_Merge/log/file_$(date +\%Y\%m\%d_\%H\%M\%S).txt"  2>&1
-
